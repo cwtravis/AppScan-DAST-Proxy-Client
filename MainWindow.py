@@ -36,7 +36,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         #App Constants
         self.geometryToRestore = None
-        self.repoUrl = QUrl("https://github.com/cwtravis/AppScan-DAST-Proxy-Client")
+        self.repoUrl = QUrl("https://github.com/cwtravis/appscan-traffic-recorder-client")
 
         #Read Version File From Resources
         version_file = QFile(":version.json")
@@ -59,6 +59,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ini_path = os.path.join(self.config_dir, f"{self.project_name}.ini").replace("\\", "/")
         self.settings = QSettings(self.ini_path, QSettings.IniFormat)
 
+        #Setup Proxy TableWidget
+        self.proxyTable.setColumnCount(5)
+        self.proxyTable.setHorizontalHeaderLabels(["Port", "Encrypted", "Stop", "Traffic", "Remove"])
+
         #Setup Button Signals
         # Button/Menu Signals Go Here
         self.closeButton.clicked.connect(self.closeButtonClicked)
@@ -70,8 +74,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.githubButton.clicked.connect(self.showGithub)
         self.showErrorsCheckbox.stateChanged.connect(self.showErrorsClicked)
         self.showDebugCheckbox.stateChanged.connect(self.showDebugClicked)
+        self.specifyPortRadioButton.toggled.connect(self.portRadioButtons)
+        self.portRangeRadioButton.toggled.connect(self.portRadioButtons)
+        self.randomPortRadioButton.toggled.connect(self.portRadioButtons)
 
         #Finally, Show the UI
+        self.specifyPortRadioButton.setChecked(True)
         geometry = self.settings.value(f"{self.project_name}/geometry")
         window_state = self.settings.value(f"{self.project_name}/windowState")
         self.showErrors = self.settings.value(f"{self.project_name}/showErrors", "1") == "1"
@@ -83,7 +91,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.restoreState(window_state)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.show()
+        self.log("AppScan Traffic Recorder Client started")
     
+    def portRadioButtons(self):
+        if self.specifyPortRadioButton.isChecked():
+            self.topPortLabel.setText("Port Number:")
+            self.bottomPortLabel.setVisible(False)
+            self.bottomPortLineEdit.setVisible(False)
+        elif self.portRangeRadioButton.isChecked():
+            self.topPortLabel.setText("Lower Bound:")
+            self.bottomPortLabel.setText("Upper Bound:")
+            self.topPortLineEdit.setVisible(True)
+            self.bottomPortLineEdit.setVisible(True)
+            self.topPortLabel.setVisible(True)
+            self.bottomPortLabel.setVisible(True)
+        elif self.randomPortRadioButton.isChecked():
+            self.topPortLabel.setText("Lower Bound:")
+            self.bottomPortLabel.setText("Upper Bound:")
+            self.topPortLineEdit.setVisible(True)
+            self.bottomPortLineEdit.setVisible(True)
+            self.topPortLabel.setVisible(True)
+            self.bottomPortLabel.setVisible(True)
+
     def showAbout(self):
         repo = self.repoUrl.toString()
         text = f"AppScan Traffic Recorder Client\n\n{self.description}\n\nGitHub: {repo}\nAuthor: {self.author} <{self.author_email}>"
@@ -120,11 +149,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def log(self, msg, level=LogLevel.INFO):
         print(msg)
-        if(not msg or level.value > self.log_level.value):
+        if not msg:
             return
-        if(level == LogLevel.ERROR):
+        if level == LogLevel.ERROR:
+            if not self.showErrors:
+                return
             style = "color: #cc0000;"
-        elif(level == LogLevel.DEBUG):
+        elif level == LogLevel.DEBUG:
+            if not self.showDebug:
+                return
             style = "color: #006600;"
         else:
             style = "color: #000000;"

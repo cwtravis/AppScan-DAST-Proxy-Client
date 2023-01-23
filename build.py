@@ -173,7 +173,7 @@ OUTPUT_FILE = f"{PROJECT_NAME}.exe"
 cwd = os.getcwd()
 ui_path = os.path.join(cwd, "resources", "ui")
 destination_file = os.path.join(cwd, "UI_Components.py")
-resource_file = os.path.join(cwd, f"{PROJECT_NAME}.qrc")
+resource_file = os.path.join(cwd, f"Resources.qrc")
 
 
 print("Installing Requirements via pip:")

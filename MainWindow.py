@@ -13,6 +13,8 @@ from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
 import Resources_rc
 from UI_Components import Ui_MainWindow
 
+from TrafficRecorder import TrafficRecorder
+
 #Log Levels
 class LogLevel(Enum):
     INFO = 0
@@ -37,7 +39,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #App Constants
         self.geometryToRestore = None
         self.repoUrl = QUrl("https://github.com/cwtravis/appscan-traffic-recorder-client")
-
+        self.traffic_recorder = TrafficRecorder()
+        
         #Read Version File From Resources
         version_file = QFile(":version.json")
         version_file.open(QFile.ReadOnly)
@@ -55,10 +58,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #Load Settings
         self.config_dir = QStandardPaths.writableLocation(QStandardPaths.ConfigLocation)
         if(not os.path.isdir(self.config_dir)):
-            os.mkdir(self.config_dir)
+            os.makedirs(self.config_dir)
         self.ini_path = os.path.join(self.config_dir, f"{self.project_name}.ini").replace("\\", "/")
         self.settings = QSettings(self.ini_path, QSettings.IniFormat)
-
+        
         #Setup Proxy TableWidget
         self.proxyTable.setColumnCount(5)
         self.proxyTable.setHorizontalHeaderLabels(["Port", "Encrypted", "Stop", "Traffic", "Remove"])

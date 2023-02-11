@@ -17,27 +17,33 @@ class TrafficRecorder:
     # Tested
     def info(self):
         api_path = "/automation/Info"
-        response = requests.get(self.url+api_path, verify=False)
-        return (response.status_code, response.json())
+        try:
+            response = requests.get(self.url+api_path, verify=False)
+            return (response.status_code, response.json())
+        except Exception as e:
+            return (500, str(e))
+        
 
     # 
     def start_proxy(self, recordingPort, upperBound=None, encrypted=False, jsonObject=None):
+        if upperBound == 0:
+            upperBound = None
         query_params = {"encrypted": False}
         api_path = f"/automation/StartProxy/{recordingPort}"
         if upperBound:
             api_path += f",{upperBound}"
         if encrypted:
             query_params["encrypted"] = True
-        if not object:
-            response = requests.get(self.url+api_path, params=query_params)
+        if not jsonObject:
+            response = requests.get(self.url+api_path, params=query_params, verify=False)
         else:
             headers = {"Content-Type": "application/json"}
-            response.post(self.url+api_path, headers=headers, params=query_params, json=jsonObject)
+            response = requests.post(self.url+api_path, headers=headers, params=query_params, json=jsonObject, verify=False)
         return (response.status_code, response.json())
 
     def stop_proxy(self, recordingPort):
         api_path = f"/automation/StopProxy/{recordingPort}"
-        response = requests.get(self.url + api_path)
+        response = requests.get(self.url + api_path, verify=False)
         return (response.status_code, response.json())
 
     def stop_all_proxies(self):
@@ -47,7 +53,7 @@ class TrafficRecorder:
 
     def certificate(self):
         api_path = "/automation/Certificate"
-        response = requests.get(self.url + api_path)
+        response = requests.get(self.url + api_path, verify=False)
         #Since 200 responses return binary content, not json
         if response.status_code >= 200 and response.status_code < 300:
             return (response.status_code, response.content)
@@ -55,7 +61,7 @@ class TrafficRecorder:
 
     def traffic(self, recordingPort):
         api_path = f"/automation/Traffic/{recordingPort}"
-        response = requests.get(self.url + api_path)
+        response = requests.get(self.url + api_path, verify=False)
         #Since 200 responses return binary content, not json
         if response.status_code >= 200 and response.status_code < 300:
             return (response.status_code, response.content)

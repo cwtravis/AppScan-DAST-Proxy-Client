@@ -10,5 +10,10 @@
     <file>resources/img/icons/info.svg</file>
     <file>resources/img/icons/code.svg</file>
     <file>resources/img/icons/file-text.svg</file>
+    <file>resources/img/icons/loading.gif</file>
+    <file>resources/img/icons/check-circle.svg</file>
+    <file>resources/img/icons/x-circle.svg</file>
+    <file>resources/img/icons/ripple.gif</file>
+    <file>resources/img/icons/stop-circle.svg</file>
 </qresource>
 </RCC>

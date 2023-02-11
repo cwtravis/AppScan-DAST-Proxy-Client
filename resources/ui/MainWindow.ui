@@ -23,6 +23,10 @@ Text_1: #fff
 Text_2: #838ea2
 */
 
+QMainWindow {
+	
+}
+
 QLabel {
 	color: #fff;
 }
@@ -221,7 +225,7 @@ QCheckBox {
              <string>Home</string>
             </property>
             <property name="icon">
-             <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+             <iconset resource="../../Resources.qrc">
               <normaloff>:/resources/img/icons/home.svg</normaloff>:/resources/img/icons/home.svg</iconset>
             </property>
             <property name="iconSize">
@@ -252,7 +256,7 @@ QCheckBox {
              <string>Log</string>
             </property>
             <property name="icon">
-             <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+             <iconset resource="../../Resources.qrc">
               <normaloff>:/resources/img/icons/file-text.svg</normaloff>:/resources/img/icons/file-text.svg</iconset>
             </property>
             <property name="iconSize">
@@ -312,7 +316,7 @@ QCheckBox {
              <string>About</string>
             </property>
             <property name="icon">
-             <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+             <iconset resource="../../Resources.qrc">
               <normaloff>:/resources/img/icons/info.svg</normaloff>:/resources/img/icons/info.svg</iconset>
             </property>
             <property name="iconSize">
@@ -343,7 +347,7 @@ QCheckBox {
              <string>Github</string>
             </property>
             <property name="icon">
-             <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+             <iconset resource="../../Resources.qrc">
               <normaloff>:/resources/img/icons/github.svg</normaloff>:/resources/img/icons/github.svg</iconset>
             </property>
             <property name="iconSize">
@@ -372,7 +376,8 @@ QCheckBox {
        </sizepolicy>
       </property>
       <property name="styleSheet">
-       <string notr="true">border: none;</string>
+       <string notr="true">border: none;
+</string>
       </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
@@ -510,7 +515,7 @@ QCheckBox {
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+                <iconset resource="../../Resources.qrc">
                  <normaloff>:/resources/img/icons/minimize.svg</normaloff>:/resources/img/icons/minimize.svg</iconset>
                </property>
                <property name="iconSize">
@@ -533,7 +538,7 @@ QCheckBox {
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+                <iconset resource="../../Resources.qrc">
                  <normaloff>:/resources/img/icons/maximize.svg</normaloff>:/resources/img/icons/maximize.svg</iconset>
                </property>
                <property name="iconSize">
@@ -556,7 +561,7 @@ QCheckBox {
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset resource="../../../AppScan-DAST-Proxy-Client/Resources.qrc">
+                <iconset resource="../../Resources.qrc">
                  <normaloff>:/resources/img/icons/x.svg</normaloff>:/resources/img/icons/x.svg</iconset>
                </property>
                <property name="iconSize">
@@ -664,44 +669,77 @@ QCheckBox {
                   <number>20</number>
                  </property>
                  <property name="topMargin">
-                  <number>20</number>
+                  <number>5</number>
                  </property>
                  <property name="rightMargin">
                   <number>20</number>
                  </property>
                  <property name="bottomMargin">
-                  <number>0</number>
+                  <number>5</number>
                  </property>
                  <item>
-                  <widget class="QLabel" name="label_2">
+                  <widget class="QWidget" name="widget_2" native="true">
                    <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>2</horstretch>
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                   <property name="font">
-                    <font>
-                     <family>Calibri</family>
-                     <pointsize>14</pointsize>
-                    </font>
-                   </property>
-                   <property name="cursor">
-                    <cursorShape>ArrowCursor</cursorShape>
-                   </property>
-                   <property name="text">
-                    <string>DAST Proxy Server URL:</string>
-                   </property>
+                   <layout class="QHBoxLayout" name="horizontalLayout_7">
+                    <item>
+                     <widget class="QLabel" name="label_2">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                        <horstretch>2</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>14</pointsize>
+                       </font>
+                      </property>
+                      <property name="cursor">
+                       <cursorShape>ArrowCursor</cursorShape>
+                      </property>
+                      <property name="text">
+                       <string>Traffic Recorder URL:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="urlStatusLabel">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="minimumSize">
+                       <size>
+                        <width>100</width>
+                        <height>0</height>
+                       </size>
+                      </property>
+                      <property name="text">
+                       <string> </string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="lineEdit">
+                  <widget class="QLineEdit" name="urlLineEdit">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -713,6 +751,9 @@ QCheckBox {
                      <width>0</width>
                      <height>30</height>
                     </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>https://myhostname:8383</string>
                    </property>
                   </widget>
                  </item>
@@ -801,7 +842,6 @@ QCheckBox {
                       </property>
                       <property name="font">
                        <font>
-                        <family>Calibri</family>
                         <pointsize>14</pointsize>
                        </font>
                       </property>
@@ -919,7 +959,6 @@ QCheckBox {
                             </property>
                             <property name="font">
                              <font>
-                              <family>Calibri</family>
                               <pointsize>12</pointsize>
                              </font>
                             </property>
@@ -944,12 +983,11 @@ QCheckBox {
                             </property>
                             <property name="font">
                              <font>
-                              <family>Calibri</family>
                               <pointsize>12</pointsize>
                              </font>
                             </property>
                             <property name="inputMask">
-                             <string>99999</string>
+                             <string/>
                             </property>
                            </widget>
                           </item>
@@ -969,7 +1007,6 @@ QCheckBox {
                             </property>
                             <property name="font">
                              <font>
-                              <family>Calibri</family>
                               <pointsize>12</pointsize>
                              </font>
                             </property>
@@ -994,12 +1031,11 @@ QCheckBox {
                             </property>
                             <property name="font">
                              <font>
-                              <family>Calibri</family>
                               <pointsize>12</pointsize>
                              </font>
                             </property>
                             <property name="inputMask">
-                             <string>99999</string>
+                             <string/>
                             </property>
                            </widget>
                           </item>
@@ -1053,7 +1089,6 @@ QCheckBox {
                             </property>
                             <property name="font">
                              <font>
-                              <family>Calibri</family>
                               <pointsize>14</pointsize>
                              </font>
                             </property>
@@ -1081,6 +1116,9 @@ QCheckBox {
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
+                </property>
+                <property name="styleSheet">
+                 <string notr="true"/>
                 </property>
                 <property name="frameShape">
                  <enum>QFrame::StyledPanel</enum>
@@ -1121,12 +1159,23 @@ QCheckBox {
                     </font>
                    </property>
                    <property name="text">
-                    <string>Running Proxies:</string>
+                    <string>Proxies:</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QTableWidget" name="proxyTable"/>
+                  <widget class="QTableWidget" name="proxyTable">
+                   <property name="styleSheet">
+                    <string notr="true">/*background-color: #343b47;*/
+QToolButton {
+	background-color: grey;
+}
+
+QTableWidget::item {
+	padding: 5px;
+}</string>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>
@@ -1380,7 +1429,7 @@ QCheckBox {
   </widget>
  </widget>
  <resources>
-  <include location="../../../AppScan-DAST-Proxy-Client/Resources.qrc"/>
+  <include location="../../Resources.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -6,14 +6,13 @@ import datetime
 from enum import Enum
 
 # PySide6 Imports
-from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QMessageBox
-from PySide6.QtCore import Qt, QSettings, QFile, QTextStream, QStandardPaths, QPoint, QTimer, QUrl
-from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
+from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QMessageBox, QTableWidgetItem, QPushButton, QHBoxLayout, QWidget, QToolButton, QLabel, QHeaderView
+from PySide6.QtCore import Qt, QSettings, QFile, QTextStream, QStandardPaths, QPoint, QTimer, QUrl, QSize, Signal, QObject, QRunnable, QThreadPool
+from PySide6.QtGui import QPixmap, QIcon, QDesktopServices, QIntValidator, QMovie
 
 import Resources_rc
-from UI_Components import Ui_MainWindow
-
 from TrafficRecorder import TrafficRecorder
+from UI_Components import Ui_MainWindow
 
 #Log Levels
 class LogLevel(Enum):
@@ -39,8 +38,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #App Constants
         self.geometryToRestore = None
         self.repoUrl = QUrl("https://github.com/cwtravis/appscan-traffic-recorder-client")
-        self.traffic_recorder = TrafficRecorder()
-        
+
         #Read Version File From Resources
         version_file = QFile(":version.json")
         version_file.open(QFile.ReadOnly)
@@ -58,13 +56,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #Load Settings
         self.config_dir = QStandardPaths.writableLocation(QStandardPaths.ConfigLocation)
         if(not os.path.isdir(self.config_dir)):
-            os.makedirs(self.config_dir)
+            os.mkdir(self.config_dir)
         self.ini_path = os.path.join(self.config_dir, f"{self.project_name}.ini").replace("\\", "/")
         self.settings = QSettings(self.ini_path, QSettings.IniFormat)
-        
+
         #Setup Proxy TableWidget
-        self.proxyTable.setColumnCount(5)
-        self.proxyTable.setHorizontalHeaderLabels(["Port", "Encrypted", "Stop", "Traffic", "Remove"])
+        headers = ["","Status", "Port", "Encrypted", "Stop", "Traffic", "Remove"]
+        self.proxyTable.setColumnCount(len(["","Status", "Port", "Encrypted", "Stop", "Traffic", "Remove"]))
+        self.proxyTable.setHorizontalHeaderLabels(headers)
+        self.proxyTable.verticalHeader().hide()
+        self.proxyTable.horizontalHeader().setSectionResizeMode(0,QHeaderView.ResizeToContents)
+        self.proxyTable.horizontalHeader().setSectionResizeMode(2,QHeaderView.ResizeToContents)
+        self.proxyTable.horizontalHeader().setStretchLastSection(True)
 
         #Setup Button Signals
         # Button/Menu Signals Go Here
@@ -80,6 +83,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.specifyPortRadioButton.toggled.connect(self.portRadioButtons)
         self.portRangeRadioButton.toggled.connect(self.portRadioButtons)
         self.randomPortRadioButton.toggled.connect(self.portRadioButtons)
+        self.startProxyButton.clicked.connect(self.startProxyButtonClicked)
+        self.urlLineEdit.editingFinished.connect(self.validateServerURL)
+
+        # Make sure the line edits only accept valid port numbers
+        portNumberValidator = QIntValidator(0, 65535)
+        self.topPortLineEdit.setValidator(portNumberValidator)
+        self.bottomPortLineEdit.setValidator(portNumberValidator)
+
+        # TrafficRecord Obj
+        self.trafficRecorder = None
+
+        ## ThreadPool
+        self.threadpool = QThreadPool()
+
+        #Setup Icons
+        ## Green check #00cc66
+        self.check_pixmap = QPixmap(":resources/img/icons/check-circle.svg").scaled(QSize(24,24))
+        ## Red x  #ff6666
+        self.x_pixmap = QPixmap(":resources/img/icons/x-circle.svg").scaled(QSize(24,24))
+        ## Red StopSign  #ff6666
+        self.stop_pixmap = QPixmap(":resources/img/icons/stop-circle.svg").scaled(QSize(20,20))
+        ## Spinning Circle Loading GIF
+        self.loading_gif = QMovie(":resources/img/icons/loading.gif")
+        self.loading_gif.setScaledSize(QSize(24,24))
+        ## Ripple GIF
+        self.ripple_gif = QMovie(":resources/img/icons/ripple.gif")
+        self.ripple_gif.setScaledSize(QSize(24,24))
 
         #Finally, Show the UI
         self.specifyPortRadioButton.setChecked(True)
@@ -87,6 +117,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         window_state = self.settings.value(f"{self.project_name}/windowState")
         self.showErrors = self.settings.value(f"{self.project_name}/showErrors", "1") == "1"
         self.showDebug = self.settings.value(f"{self.project_name}/showDebug", "1") == "1"
+        url = self.settings.value(f"{self.project_name}/serverUrl", "")
         self.showErrorsCheckbox.setChecked(self.showErrors)
         self.showDebugCheckbox.setChecked(self.showDebug)
         if(geometry and window_state):
@@ -94,8 +125,144 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.restoreState(window_state)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.show()
+        if len(url) > 0:
+            self.urlLineEdit.setText(url)
+            self.validateServerURL()
         self.log("AppScan Traffic Recorder Client started")
     
+    def setServerValidateResult(self, result):
+        self.loading_gif.stop()
+        self.statusLabel.clear()
+        self.urlLineEdit.setEnabled(True)
+        self.urlStatusLabel.clear()
+        if result:
+            self.urlStatusLabel.setPixmap(self.check_pixmap)
+            url = self.urlLineEdit.text()
+            self.settings.setValue(f"{self.project_name}/serverUrl", url)
+        else:
+            self.urlStatusLabel.setPixmap(self.x_pixmap)
+            self.settings.setValue(f"{self.project_name}/serverUrl", "")
+
+    def validateServerURL(self):
+        self.urlLineEdit.setEnabled(False)
+        url = self.urlLineEdit.text()
+        self.urlStatusLabel.setMovie(self.loading_gif)
+        self.loading_gif.start()
+        worker = TrafficRecorderRunner(url)
+        worker.signals.log.connect(self.log)
+        worker.signals.result.connect(self.setServerValidateResult)
+        self.threadpool.start(worker)
+
+    def startProxyButtonClicked(self):
+        encrypted = self.encryptCheckBox.isChecked()
+        topPort = self.topPortLineEdit.text()
+        bottomPort = self.bottomPortLineEdit.text()
+        url = self.urlLineEdit.text()
+
+        if self.specifyPortRadioButton.isChecked():
+            print(f"Specified Port {topPort} Encrypted {encrypted}")
+            worker = TrafficRecorderRunner(url, TrafficRecorderRunner.Action.START)
+            worker.signals.log.connect(self.log)
+            worker.signals.httpResponse.connect(self.proxyStartCallback)
+            self.threadpool.start(worker)
+        elif self.portRangeRadioButton.isChecked():
+            print(f"Port Range {topPort}-{bottomPort} Encrypted {encrypted}")
+        elif self.randomPortRadioButton.isChecked():
+            print(f"Random Port {topPort}-{bottomPort} Encrypted {encrypted}")
+        else:
+            return
+
+    def proxyStartCallback(self, resultTuple):
+        if resultTuple[0] >= 200 and resultTuple[0] < 300:
+            port = resultTuple[1]["port"]
+            encrypted = resultTuple[1]["encryptTraffic"]
+            msg = resultTuple[1]["message"]
+            self.statusMsg(msg, 7000)
+            self.addProxyTableLine(port, encrypted)
+
+    def stopProxyButtonClicked(self, port):
+        self.log(f"Stop Button Clicked for Proxy Port {port}")
+        url = self.urlLineEdit.text()
+        worker = TrafficRecorderRunner(url, TrafficRecorderRunner.Action.STOP)
+        worker.setTopPort(port)
+        worker.signals.log.connect(self.log)
+        worker.signals.httpResponse.connect(self.proxyStopCallback)
+        self.threadpool.start(worker)
+
+    def proxyStopCallback(self, resultTuple):
+        msg = resultTuple[1]["message"]
+        if resultTuple[0] >= 200 and resultTuple[0] < 300:
+            port = resultTuple[1]["port"]
+            for x in range(0, self.proxyTable.rowCount()):
+                if self.proxyTable.item(x, 2).text() == port:
+                    self.proxyTable.cellWidget(x, 0).clear()
+                    self.proxyTable.cellWidget(x, 0).setPixmap(self.stop_pixmap)
+                    self.proxyTable.cellWidget(x, 1).setText("Stopped")
+                    break
+        else:
+            self.log(f"Problem stopping listener - status code {resultTuple[0]}")
+            self.log(resultTuple[0])
+        self.statusMsg(msg, 7000)
+
+    def rowButtonClicked(self):
+        sender = self.sender()
+        row = sender.getRow()
+        action = sender.getAction()
+        port = sender.getPortNumber()
+        if action == "stop":
+            self.stopProxyButtonClicked(port)
+        elif action == "traffic":
+            for x in range(0, self.proxyTable.rowCount()):
+                if self.proxyTable.item(x, 2).text() == port:
+                    #Attempt to stop the proxy if its still Listening
+                    if self.proxyTable.cellWidget(x, 1).text() == "Listening":
+                        resp = QMessageBox.question(self, "Traffic Recorder", 
+                            f"The proxy at port {port} is still listening. Would you like to to stop it?", 
+                            QMessageBox.StandardButton.Yes, 
+                            QMessageBox.StandardButton.No)
+                        if resp == QMessageBox.StandardButton.Yes:
+                            self.stopProxyButtonClicked(port)
+                    
+        elif action == "remove":
+            for x in range(0, self.proxyTable.rowCount()):
+                if self.proxyTable.item(x, 2).text() == port:
+                    #Attempt to stop the proxy if its still Listening
+                    if self.proxyTable.cellWidget(x, 1).text() == "Listening":
+                        resp = QMessageBox.question(self, "Traffic Recorder", 
+                            f"The proxy at port {port} is still listening. Would you like to to stop it?", 
+                            QMessageBox.StandardButton.Yes, 
+                            QMessageBox.StandardButton.No)
+                        if resp == QMessageBox.StandardButton.Yes:
+                            self.stopProxyButtonClicked(port)
+                    self.proxyTable.removeRow(x)
+
+    def addProxyTableLine(self, port, encrypted):
+        newRowIndex = self.proxyTable.rowCount()
+        stopBtn = ProxyTableButton(port, "stop", newRowIndex)
+        stopBtn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        stopBtn.setText("Stop")
+        stopBtn.clicked.connect(self.rowButtonClicked)
+        trafficBtn = ProxyTableButton(port, "traffic", newRowIndex)
+        trafficBtn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        trafficBtn.setText("Download")
+        trafficBtn.clicked.connect(self.rowButtonClicked)
+        removeBtn = ProxyTableButton(port, "remove", newRowIndex)
+        removeBtn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        removeBtn.setText("Remove")
+        removeBtn.clicked.connect(self.rowButtonClicked)
+        gifLabel = QLabel()
+        gifLabel.setMovie(self.ripple_gif)
+        self.ripple_gif.start()
+        statusTextLabel = QLabel("Listening")
+        self.proxyTable.insertRow(newRowIndex)
+        self.proxyTable.setCellWidget(newRowIndex, 0, gifLabel)
+        self.proxyTable.setCellWidget(newRowIndex, 1, statusTextLabel)
+        self.proxyTable.setItem(newRowIndex, 2, QTableWidgetItem(port))
+        self.proxyTable.setItem(newRowIndex, 3, QTableWidgetItem(str(encrypted)))
+        self.proxyTable.setCellWidget(newRowIndex, 4, stopBtn)
+        self.proxyTable.setCellWidget(newRowIndex, 5, trafficBtn)
+        self.proxyTable.setCellWidget(newRowIndex, 6, removeBtn)
+
     def portRadioButtons(self):
         if self.specifyPortRadioButton.isChecked():
             self.topPortLabel.setText("Port Number:")
@@ -149,6 +316,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             showDebugStr = "0"
         self.settings.setValue(f"{self.project_name}/showDebug", showDebugStr)
         self.settings.sync()
+
+    def statusMsg(self, msg, timeout=0):
+        self.statusLabel.setText(msg)
+        if timeout > 0:
+            timer = QTimer.singleShot(timeout, lambda: self.statusLabel.setText(""))
 
     def log(self, msg, level=LogLevel.INFO):
         print(msg)
@@ -217,6 +389,84 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.settings.setValue(f"{self.project_name}/showDebug", showDebug)
         self.settings.sync()
         evt.accept()
+
+
+class TrafficRecorderRunner(QRunnable):
+
+    #Actions
+    class Action(Enum):
+        START = 0
+        STOP = 10
+        TRAFFIC = 20
+        CERT = 30
+        VERIFY = 40
+
+    class Signals(QObject):
+        log = Signal(str, LogLevel)
+        result = Signal(bool)
+        httpResponse = Signal(tuple)
+
+    def __init__(self, url, action=Action.VERIFY):
+        super(TrafficRecorderRunner, self).__init__()
+        self.action = action
+        self.url = url
+        self.trafficRecorder = TrafficRecorder(url)
+        self.signals = self.Signals()
+        self.topPort = 0
+        self.botPort = None
+        self.encrypt = False
+
+    def setTopPort(self, topPort):
+        self.topPort = topPort
+
+    def setBopPort(self, botPort):
+        self.botPort = botPort
+
+    def setEncrypt(self, encrypt):
+        self.encrypt = encrypt
+
+    def run(self):
+        if self.action == self.Action.VERIFY:
+            res = self.trafficRecorder.info()
+            self.log(f"Validating Server URL {self.url}", LogLevel.DEBUG)
+            self.log(f"Response HTTP Code:{res[0]}\n{res[1]}", LogLevel.DEBUG)
+            self.signals.result.emit(res[0] == 200)
+            return
+        elif self.action == self.Action.START:
+            res = self.trafficRecorder.start_proxy(self.topPort, self.botPort, self.encrypt)
+            self.log(f"Starting Proxy {self.url}", LogLevel.DEBUG)
+            self.log(f"Response HTTP Code:{res[0]}\n{res[1]}", LogLevel.DEBUG)
+            self.signals.httpResponse.emit(res)
+            return
+        elif self.action == self.Action.STOP:
+            res = self.trafficRecorder.stop_proxy(self.topPort)
+            self.log(f"Stopping Proxy Port {self.topPort}", LogLevel.DEBUG)
+            self.log(f"Response HTTP Code:{res[0]}\n{res[1]}", LogLevel.DEBUG)
+            self.signals.httpResponse.emit(res)
+            return
+        elif self.action == self.Action.TRAFFIC:
+            return
+        elif self.action == self.Action.CERT:
+            return
+
+    def log(self, msg, level=LogLevel.INFO):
+        self.signals.log.emit(msg, level)
+
+class ProxyTableButton(QToolButton):
+    def __init__(self, portNumber, action, row):
+        super(ProxyTableButton, self).__init__()
+        self.portNumber = portNumber
+        self.action = action
+        self.row = row
+    
+    def getPortNumber(self):
+        return self.portNumber
+
+    def getAction(self):
+        return self.action
+
+    def getRow(self):
+        return self.row
 
 # Start the PySide6 App
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import datetime
 from enum import Enum
 
 # PySide6 Imports
-from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QMessageBox, QTableWidgetItem, QPushButton, QHBoxLayout, QWidget, QToolButton, QLabel, QHeaderView
+from PySide6.QtWidgets import QApplication, QMainWindow, QStyle, QMessageBox, QTableWidgetItem, QPushButton, QHBoxLayout, QWidget, QToolButton, QLabel, QHeaderView, QFileDialog
 from PySide6.QtCore import Qt, QSettings, QFile, QTextStream, QStandardPaths, QPoint, QTimer, QUrl, QSize, Signal, QObject, QRunnable, QThreadPool
 from PySide6.QtGui import QPixmap, QIcon, QDesktopServices, QIntValidator, QMovie
 
@@ -201,8 +201,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     break
         else:
             self.log(f"Problem stopping listener - status code {resultTuple[0]}")
-            self.log(resultTuple[0])
+            self.log(resultTuple[1])
         self.statusMsg(msg, 7000)
+
+    def trafficButtonClicked(self, port):
+        self.log(f"Traffic Button Clicked for Proxy Port {port}")
+        url = self.urlLineEdit.text()
+        worker = TrafficRecorderRunner(url, TrafficRecorderRunner.Action.TRAFFIC)
+        worker.setTopPort(port)
+        worker.signals.log.connect(self.log)
+        worker.signals.httpResponse.connect(self.proxyTrafficCallback)
+        self.threadpool.start(worker)
+
+    def proxyTrafficCallback(self, resultTuple):
+        trafficBytes = resultTuple[1]
+        numBytes = len(trafficBytes)
+        if resultTuple[0] >= 200 and resultTuple[0] < 300:
+            if numBytes > 0:
+                res = QFileDialog.getSaveFileName(self, "Save the traffic file.", QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation), "Traffic Recordings (*.dast.config)")
+                with open(res[0], "wb") as file:
+                    file.write(trafficBytes)
+                self.statusMsg(f"File Saved: {res[0]}", 7000)
+        else:
+            self.log(f"Problem downloading traffic - status code {resultTuple[0]}")
+            self.log(resultTuple[1])
+            self.statusMsg(f"Problem downloading traffic - status code {resultTuple[0]}", 7000)
+        
 
     def rowButtonClicked(self):
         sender = self.sender()
@@ -222,6 +246,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             QMessageBox.StandardButton.No)
                         if resp == QMessageBox.StandardButton.Yes:
                             self.stopProxyButtonClicked(port)
+                    self.trafficButtonClicked(port)
                     
         elif action == "remove":
             for x in range(0, self.proxyTable.rowCount()):
@@ -415,6 +440,7 @@ class TrafficRecorderRunner(QRunnable):
         self.topPort = 0
         self.botPort = None
         self.encrypt = False
+        self.stopProxy = False
 
     def setTopPort(self, topPort):
         self.topPort = topPort
@@ -424,6 +450,9 @@ class TrafficRecorderRunner(QRunnable):
 
     def setEncrypt(self, encrypt):
         self.encrypt = encrypt
+
+    def setStopProxy(self, stop):
+        self.stopProxy = stop
 
     def run(self):
         if self.action == self.Action.VERIFY:
@@ -445,6 +474,10 @@ class TrafficRecorderRunner(QRunnable):
             self.signals.httpResponse.emit(res)
             return
         elif self.action == self.Action.TRAFFIC:
+            res = self.trafficRecorder.traffic(self.topPort)
+            self.log(f"Downloading Traffic from port {self.topPort}", LogLevel.DEBUG)
+            self.log(f"Response HTTP Code:{res[0]}\n{res[1]}", LogLevel.DEBUG)
+            self.signals.httpResponse.emit(res)
             return
         elif self.action == self.Action.CERT:
             return

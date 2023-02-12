@@ -63,6 +63,7 @@ class TrafficRecorder:
         api_path = f"/automation/Traffic/{recordingPort}"
         response = requests.get(self.url + api_path, verify=False)
         #Since 200 responses return binary content, not json
+        print(response.text)
         if response.status_code >= 200 and response.status_code < 300:
             return (response.status_code, response.content)
         return (response.status_code, response.json())
